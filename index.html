@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+  <head>
+    <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+    <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+    <title>Socket.IO chat</title>
+    <style>
+      canvas{
+        border: 1px solid black;
+      }
+    </style>
+  </head>
+  <body>
+    <p id="msg">
+      canvas
+    </p>
+    <canvas id="canvas" width="300", height="300"></canvas>
+    <script>
+      var socket = io();
+      var canvas = document.querySelector('canvas');
+      var ctx = canvas.getContext("2d");
+      function penDown(evt) {
+        ctx.beginPath();
+        console.log("This is penDown");
+        console.log(evt.layerX, evt.layerY);
+        isPenDown = true;
+        ctx.strokeStyle = x;
+      }
+
+      function penMove(evt) {
+        // console.log("evt.layerX, evt.layerY");
+        if (isPenDown){
+          ctx.lineTo(evt.layerX, evt.layerY);
+          ctx.stroke();
+        }
+      }
+      var pen={};
+      canvas.addEventListener("mousedown",function(event){
+        drawDot(event)
+        canvas.addEventListener("mousemove", drawDot)
+      })
+      canvas.addEventListener("mouseup",function(){
+        canvas.removeEventListener("mousemove", drawDot)
+      })
+      canvas.addEventListener("mouseleave",function(){
+        canvas.removeEventListener("mousemove", drawDot)
+      })
+      canvas.addEventListener("touchstart",function(event){
+        drawDotTouch(event)
+        canvas.addEventListener("touchmove", drawDotTouch)
+      })
+      canvas.addEventListener("touchend",function(){
+        canvas.removeEventListener("touchmove", drawDotTouch)
+      })
+      function drawDotTouch(event){
+        event.preventDefault();
+        socket.emit('canvas clicked',{x:event.changedTouches[0].clientX-canvas.offsetLeft, y:event.changedTouches[0].clientY-canvas.offsetTop});
+
+      }
+      function drawDot(event){
+        socket.emit('canvas clicked',{x:event.x-canvas.offsetLeft, y:event.y-canvas.offsetTop});
+
+      }
+      socket.on('chat message', function(msg){
+        $('#messages').append($('<li>').text(msg));
+        $("#chatDiv").scrollTop($("#chatDiv")[0].scrollHeight);
+      });
+
+      socket.on('canvas clicked', function(data){
+        console.log("canvas cliecked");
+        console.log(data.x, data.y);
+
+        ctx.fillRect(data.x,data.y,2,2);
+      });
+      socket.on('user', function(message){
+        console.log(message.message)
+      })
+    </script>
+  </body>
+</html>
