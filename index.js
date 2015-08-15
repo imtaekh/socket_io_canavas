@@ -11,13 +11,11 @@ io.on('connection', function(socket){
   socket.on('disconnect', function(){
     console.log('user disconnected');
   });
+
   io.emit('user',{message:"user connected"});
-  socket.on('chat message', function(msg){
-    console.log('message: ' + msg);
-    io.emit('chat message', msg);
-  });
-  socket.on('canvas clicked', function(data){
-    io.emit('canvas clicked', data);
+
+  socket.on('draw_client', function(data){
+    io.emit('draw_server', data);
   });
 });
 

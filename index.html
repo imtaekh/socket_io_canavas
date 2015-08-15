@@ -1,77 +1,89 @@
 <!doctype html>
 <html>
   <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
     <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
     <title>Socket.IO chat</title>
     <style>
-      canvas{
-        border: 1px solid black;
+      .color{
+        display: inline-block;
+        width:20px;
+        height:20px;
       }
     </style>
   </head>
   <body>
-    <p id="msg">
-      canvas
-    </p>
-    <canvas id="canvas" width="300", height="300"></canvas>
+    <div class="color" data-color="#323A54" title="Dark Gray"></div>
+    <div class="color" data-color="#DA4453" title="Dragon Fruit"></div>
+    <div class="color" data-color="#4A89DC" title="Blue Jeans"></div>
+    <div class="color" data-color="#3DAFDA" title="Aqua"></div>
+    <div class="color" data-color="#37BC9B" title="Mint"></div>
+    <div class="color" data-color="#8CC152" title="Grass"></div>
+    <div class="color" data-color="#F6BB42" title="Sun Flower"></div>
+    <div class="color" data-color="#D770AD" title="Pink Rose"></div><br>
+
     <script>
       var socket = io();
-      var canvas = document.querySelector('canvas');
+      var pen={};
+
+      //color div setting
+      var color="#323A54";
+      for(i=0;i<$(".color").length;i++){
+        $(".color").eq(i).css("background-color",$(".color").eq(i).data("color"))
+      }
+      $(".color").on("click",function(){
+        color=$(this).data("color");
+      });
+
+      //canvas tag setting
+      var canvas = document.createElement('canvas');
+      canvas.width=300;
+      canvas.height=300;
+      canvas.style.border = "black 1px solid";
+      document.body.appendChild(canvas);
       var ctx = canvas.getContext("2d");
-      function penDown(evt) {
-        ctx.beginPath();
-        console.log("This is penDown");
-        console.log(evt.layerX, evt.layerY);
-        isPenDown = true;
-        ctx.strokeStyle = x;
+
+      canvas.addEventListener("mousedown",function(event){
+        canvas.addEventListener("mousemove", drawLine);
+        pen.x = event.x-canvas.offsetLeft;
+        pen.y = event.y-canvas.offsetTop;
+      });
+      canvas.addEventListener("mouseup",function(){
+        canvas.removeEventListener("mousemove", drawLine)
+      });
+      canvas.addEventListener("mouseleave",function(){
+        canvas.removeEventListener("mousemove", drawLine)
+      });
+      function drawLine(event){
+        socket.emit('draw_client',{xBegin:pen.x, yBegin:pen.y, xEnd:event.x-canvas.offsetLeft, yEnd:event.y-canvas.offsetTop, color:color});
+        pen.x = event.x-canvas.offsetLeft;
+        pen.y = event.y-canvas.offsetTop;
       }
 
-      function penMove(evt) {
-        // console.log("evt.layerX, evt.layerY");
-        if (isPenDown){
-          ctx.lineTo(evt.layerX, evt.layerY);
-          ctx.stroke();
-        }
-      }
-      var pen={};
-      canvas.addEventListener("mousedown",function(event){
-        drawDot(event)
-        canvas.addEventListener("mousemove", drawDot)
-      })
-      canvas.addEventListener("mouseup",function(){
-        canvas.removeEventListener("mousemove", drawDot)
-      })
-      canvas.addEventListener("mouseleave",function(){
-        canvas.removeEventListener("mousemove", drawDot)
-      })
       canvas.addEventListener("touchstart",function(event){
-        drawDotTouch(event)
-        canvas.addEventListener("touchmove", drawDotTouch)
+        canvas.addEventListener("touchmove", drawLineTouch)
+        pen.x = event.changedTouches[0].clientX-canvas.offsetLeft;
+        pen.y = event.changedTouches[0].clientY-canvas.offsetTop;
       })
       canvas.addEventListener("touchend",function(){
-        canvas.removeEventListener("touchmove", drawDotTouch)
+        canvas.removeEventListener("touchmove", drawLineTouch)
       })
-      function drawDotTouch(event){
+      function drawLineTouch(event){
         event.preventDefault();
-        socket.emit('canvas clicked',{x:event.changedTouches[0].clientX-canvas.offsetLeft, y:event.changedTouches[0].clientY-canvas.offsetTop});
-
+        socket.emit('draw_client',{xBegin:pen.x, yBegin:pen.y, xEnd:event.changedTouches[0].clientX-canvas.offsetLeft, yEnd:event.changedTouches[0].clientY-canvas.offsetTop, color:color});
+        pen.x = event.changedTouches[0].clientX-canvas.offsetLeft;
+        pen.y = event.changedTouches[0].clientY-canvas.offsetTop;
       }
-      function drawDot(event){
-        socket.emit('canvas clicked',{x:event.x-canvas.offsetLeft, y:event.y-canvas.offsetTop});
 
-      }
-      socket.on('chat message', function(msg){
-        $('#messages').append($('<li>').text(msg));
-        $("#chatDiv").scrollTop($("#chatDiv")[0].scrollHeight);
+      socket.on('draw_server', function(data){
+        ctx.beginPath();
+        ctx.moveTo(data.xBegin,data.yBegin);
+        ctx.lineTo(data.xEnd,data.yEnd);
+        ctx.strokeStyle=data.color;
+        ctx.stroke();
       });
 
-      socket.on('canvas clicked', function(data){
-        console.log("canvas cliecked");
-        console.log(data.x, data.y);
-
-        ctx.fillRect(data.x,data.y,2,2);
-      });
       socket.on('user', function(message){
         console.log(message.message)
       })
