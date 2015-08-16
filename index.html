@@ -23,17 +23,20 @@
           45deg,
           #FFFFFF,
           #FFFFFF 10px,
-          #E6E9ED 10px,
-          #E6E9ED 20px
+          #D2D2D2 10px,
+          #D2D2D2 20px
         );
       }
-      .preview{
+      .brushPreview{
         position: absolute;
         width: 6px;
         height: 6px;
         left: 50%;
         top: 50%;
         transform: translate(-50%, -50%);
+        -webkit-transform: translate(-50%, -50%);
+        -moz-transform: translate(-50%, -50%);
+        -ms-transform: translate(-50%, -50%);
         border-radius: 100%;
         background-color: #323A54;
       }
@@ -60,7 +63,7 @@
     <h1>Socket IO Canvas</h1>
     <div class="tools">
       <div class="previewContainer">
-        <div class="preview"></div>
+        <div class="brushPreview"></div>
       </div>
       <div class="color" data-color="#323A54" title="Dark Gray"></div>
       <div class="color" data-color="#DA4453" title="Dragon Fruit"></div>
@@ -88,27 +91,27 @@
             size: 6
           };
 
-      //color divs setting
+      //Color divs setting
       for (var i = 0; i < $(".color").length; i++){
         $(".color").eq(i).css("background-color",$(".color").eq(i).data("color"))
       }
       $(".color").on("click",changeBrushColor);
       function changeBrushColor(){
         brush.color = $(this).data("color");
-        $(".preview").css("background-color",brush.color);
+        $(".brushPreview").css("background-color",brush.color);
       }
 
-      //size range slider setting
+      //Size range slider setting
       $(".sizeValue").text($("#size").val());
       $("#size").on("change",changeBrushSize);
       $("#size").on("input",changeBrushSize);
       function changeBrushSize() {
         brush.size=$("#size").val();
-        $(".preview").css("width",brush.size);
-        $(".preview").css("height",brush.size);
+        $(".brushPreview").css("width",brush.size);
+        $(".brushPreview").css("height",brush.size);
       }
 
-      //canvas tag setting
+      //Canvas tag setting
       var canvas = document.createElement('canvas');
       canvas.width = WIDTH;
       canvas.height = HEIGHT;
