@@ -6,40 +6,108 @@
     <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
     <title>Socket IO Canvas</title>
     <style>
+      h1{
+        font-family: sans-serif;
+        margin: 5px;
+        width: 300px;
+        text-align: center;
+      }
+      .previewContainer{
+        position: relative;
+        float: left;
+        margin-right: 4px;
+        border: 1px solid black;
+        width: 52px;
+        height: 54px;
+        background: repeating-linear-gradient(
+          45deg,
+          #FFFFFF,
+          #FFFFFF 10px,
+          #E6E9ED 10px,
+          #E6E9ED 20px
+        );
+      }
+      .preview{
+        position: absolute;
+        width: 6px;
+        height: 6px;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: 100%;
+        background-color: #323A54;
+      }
+      .tools{
+        margin: 1px 0;
+        width: 310px;
+      }
       .color{
+        margin-left: 1px;
         display: inline-block;
-        width: 20px;
-        height: 20px;
+        width: 24px;
+        height: 24px;
         cursor: pointer;
+        border: 1px solid black;
+      }
+      .size{
+        position: relative;
+        width: 87px;
+        top: -5px;
       }
     </style>
   </head>
   <body>
     <h1>Socket IO Canvas</h1>
-    <div class="color" data-color="#323A54" title="Dark Gray"></div>
-    <div class="color" data-color="#DA4453" title="Dragon Fruit"></div>
-    <div class="color" data-color="#4A89DC" title="Blue Jeans"></div>
-    <div class="color" data-color="#3DAFDA" title="Aqua"></div>
-    <div class="color" data-color="#37BC9B" title="Mint"></div>
-    <div class="color" data-color="#8CC152" title="Grass"></div>
-    <div class="color" data-color="#F6BB42" title="Sun Flower"></div>
-    <div class="color" data-color="#D770AD" title="Pink Rose"></div><br>
+    <div class="tools">
+      <div class="previewContainer">
+        <div class="preview"></div>
+      </div>
+      <div class="color" data-color="#323A54" title="Dark Gray"></div>
+      <div class="color" data-color="#DA4453" title="Dragon Fruit"></div>
+      <div class="color" data-color="#E9573F" title="Bitter Sweet"></div>
+      <div class="color" data-color="#4A89DC" title="Blue Jeans"></div>
+      <div class="color" data-color="#3DAFDA" title="Aqua"></div>
+      <div class="color" data-color="#37BC9B" title="Mint"></div>
+      <div class="color" data-color="#8CC152" title="Grass"></div>
+      <div class="color" data-color="#F6BB42" title="Sun Flower"></div>
+      <div class="color" data-color="#D770AD" title="Pink Rose"></div>
+      <div class="color" data-color="#967ADC" title="Lavender"></div>
+      <div class="color" data-color="#AAB2BD" title="Medium Gray"></div>
+      <div class="color" data-color="#E6E9ED" title="Light Gray"></div>
+      <div class="color" data-color="#FFFFFF" title="White"></div>
+      <input type="range" class="size" id="size" min="2" max="50" value="6">
+    </div>
 
     <script>
-      var socket = io(),
-          color="#323A54",
-          pen={x: 0, y: 0},
-          WIDTH=300,
-          HEIGHT=300;
+      var WIDTH=300,
+          HEIGHT=300,
+          socket = io(),
+          brush={
+            pos: {x: 0, y: 0},
+            color: "#323A54",
+            size: 6
+          };
 
-      //color div setting
+      //color divs setting
       for (var i = 0; i < $(".color").length; i++){
         $(".color").eq(i).css("background-color",$(".color").eq(i).data("color"))
       }
-      $(".color").on("click",function(){
-        color = $(this).data("color");
-      });
-      
+      $(".color").on("click",changeBrushColor);
+      function changeBrushColor(){
+        brush.color = $(this).data("color");
+        $(".preview").css("background-color",brush.color);
+      }
+
+      //size range slider setting
+      $(".sizeValue").text($("#size").val());
+      $("#size").on("change",changeBrushSize);
+      $("#size").on("input",changeBrushSize);
+      function changeBrushSize() {
+        brush.size=$("#size").val();
+        $(".preview").css("width",brush.size);
+        $(".preview").css("height",brush.size);
+      }
+
       //canvas tag setting
       var canvas = document.createElement('canvas');
       canvas.width = WIDTH;
@@ -69,26 +137,41 @@
         event.preventDefault();
         canvas.addEventListener("mousemove",lineTo);
         canvas.addEventListener("touchmove",lineTo);
-        pen = getXY(event);
+        brush.pos = getXY(event);
+        socket.emit('draw_client',{ xBegin: brush.pos.x, yBegin: brush.pos.y, color: brush.color, size: brush.size });
       }
       function lineTo(event){
         event.preventDefault();
         var lineTo = getXY(event);
-        socket.emit('draw_client',{xBegin:pen.x, yBegin:pen.y, xEnd:lineTo.x, yEnd:lineTo.y, color:color});
-        pen = lineTo;
+        socket.emit('draw_client',{ xBegin: brush.pos.x, yBegin: brush.pos.y, xEnd: lineTo.x, yEnd: lineTo.y, color: brush.color, size: brush.size });
+        brush.pos = lineTo;
       }
       function lineEnd(){
         canvas.removeEventListener("mousemove",lineTo);
         canvas.removeEventListener("touchmove",lineTo);
       }
 
-      //Receive data from server
+      //Receive data from server & drawing action
       socket.on('draw_server',function(data){
-        ctx.beginPath();
-        ctx.moveTo(data.xBegin,data.yBegin);
-        ctx.lineTo(data.xEnd,data.yEnd);
         ctx.strokeStyle=data.color;
+        ctx.fillStyle=data.color;
+
+        //draw dots at the start point and the end point
+        ctx.beginPath();
+        ctx.arc(data.xBegin,data.yBegin,data.size/2-1,0,2*Math.PI);
+        ctx.arc(data.xEnd,data.yEnd,data.size/2-1,0,2*Math.PI);
+        ctx.lineWidth=1;
         ctx.stroke();
+        ctx.fill();
+
+        //draw a line between the start point and the end point
+        if(data.xEnd && data.yEnd){
+          ctx.beginPath();
+          ctx.moveTo(data.xBegin,data.yBegin);
+          ctx.lineTo(data.xEnd,data.yEnd);
+          ctx.lineWidth=data.size;
+          ctx.stroke();
+        }
       });
 
     </script>
