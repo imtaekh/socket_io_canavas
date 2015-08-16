@@ -4,16 +4,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
     <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
-    <title>Socket.IO chat</title>
+    <title>Socket IO Canvas</title>
     <style>
       .color{
         display: inline-block;
-        width:20px;
-        height:20px;
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
       }
     </style>
   </head>
   <body>
+    <h1>Socket IO Canvas</h1>
     <div class="color" data-color="#323A54" title="Dark Gray"></div>
     <div class="color" data-color="#DA4453" title="Dragon Fruit"></div>
     <div class="color" data-color="#4A89DC" title="Blue Jeans"></div>
@@ -24,59 +26,64 @@
     <div class="color" data-color="#D770AD" title="Pink Rose"></div><br>
 
     <script>
-      var socket = io();
-      var pen={};
+      var socket = io(),
+          color="#323A54",
+          pen={x: 0, y: 0},
+          WIDTH=300,
+          HEIGHT=300;
 
       //color div setting
-      var color="#323A54";
-      for(i=0;i<$(".color").length;i++){
+      for (var i = 0; i < $(".color").length; i++){
         $(".color").eq(i).css("background-color",$(".color").eq(i).data("color"))
       }
       $(".color").on("click",function(){
-        color=$(this).data("color");
+        color = $(this).data("color");
       });
-
+      
       //canvas tag setting
       var canvas = document.createElement('canvas');
-      canvas.width=300;
-      canvas.height=300;
+      canvas.width = WIDTH;
+      canvas.height = HEIGHT;
       canvas.style.border = "black 1px solid";
       document.body.appendChild(canvas);
       var ctx = canvas.getContext("2d");
 
-      canvas.addEventListener("mousedown",function(event){
-        canvas.addEventListener("mousemove", drawLine);
-        pen.x = event.x-canvas.offsetLeft;
-        pen.y = event.y-canvas.offsetTop;
-      });
-      canvas.addEventListener("mouseup",function(){
-        canvas.removeEventListener("mousemove", drawLine)
-      });
-      canvas.addEventListener("mouseleave",function(){
-        canvas.removeEventListener("mousemove", drawLine)
-      });
-      function drawLine(event){
-        socket.emit('draw_client',{xBegin:pen.x, yBegin:pen.y, xEnd:event.x-canvas.offsetLeft, yEnd:event.y-canvas.offsetTop, color:color});
-        pen.x = event.x-canvas.offsetLeft;
-        pen.y = event.y-canvas.offsetTop;
-      }
+      //EventListners for Mouse
+      canvas.addEventListener("mousedown",lineStart);
+      canvas.addEventListener("mouseup",lineEnd);
+      canvas.addEventListener("mouseleave",lineEnd);
 
-      canvas.addEventListener("touchstart",function(event){
-        canvas.addEventListener("touchmove", drawLineTouch)
-        pen.x = event.changedTouches[0].clientX-canvas.offsetLeft;
-        pen.y = event.changedTouches[0].clientY-canvas.offsetTop;
-      })
-      canvas.addEventListener("touchend",function(){
-        canvas.removeEventListener("touchmove", drawLineTouch)
-      })
-      function drawLineTouch(event){
+      //EventListners for Touch
+      canvas.addEventListener("touchstart",lineStart);
+      canvas.addEventListener("touchend",lineEnd);
+
+      //Event Actions
+      function getXY(event){
+        var type = (event.changedTouches)?(event.changedTouches[0]):(event);
+        return {
+          x: type.pageX+window.pageXOffset-canvas.offsetLeft-canvas.clientLeft,
+          y: type.pageY+window.pageYOffset-canvas.offsetTop-canvas.clientTop
+        };
+      }
+      function lineStart(event){
         event.preventDefault();
-        socket.emit('draw_client',{xBegin:pen.x, yBegin:pen.y, xEnd:event.changedTouches[0].clientX-canvas.offsetLeft, yEnd:event.changedTouches[0].clientY-canvas.offsetTop, color:color});
-        pen.x = event.changedTouches[0].clientX-canvas.offsetLeft;
-        pen.y = event.changedTouches[0].clientY-canvas.offsetTop;
+        canvas.addEventListener("mousemove",lineTo);
+        canvas.addEventListener("touchmove",lineTo);
+        pen = getXY(event);
+      }
+      function lineTo(event){
+        event.preventDefault();
+        var lineTo = getXY(event);
+        socket.emit('draw_client',{xBegin:pen.x, yBegin:pen.y, xEnd:lineTo.x, yEnd:lineTo.y, color:color});
+        pen = lineTo;
+      }
+      function lineEnd(){
+        canvas.removeEventListener("mousemove",lineTo);
+        canvas.removeEventListener("touchmove",lineTo);
       }
 
-      socket.on('draw_server', function(data){
+      //Receive data from server
+      socket.on('draw_server',function(data){
         ctx.beginPath();
         ctx.moveTo(data.xBegin,data.yBegin);
         ctx.lineTo(data.xEnd,data.yEnd);
@@ -84,9 +91,6 @@
         ctx.stroke();
       });
 
-      socket.on('user', function(message){
-        console.log(message.message)
-      })
     </script>
   </body>
 </html>
