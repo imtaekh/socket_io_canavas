@@ -21,5 +21,5 @@ io.on('connection', function(socket){
 });
 
 http.listen(port, function(){
-  console.log('listening on http://127.0.0.1/'+port+'/');
+  console.log('listening on http://127.0.0.1:'+port+'/');
 });
